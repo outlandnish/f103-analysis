@@ -16,13 +16,17 @@ void writeMem(uint32_t const addr, uint32_t const data);
 
 uint8_t const strHelp[] = 	"Help\r\n-----------\r\n"
 				"ADDR, VAL, LEN: 32-bit Hex encoded:\r\n e.g., 0A1337FF\r\n"
+				"SHOW_OFFSET: 0 (hide double word offset) or 1 (show double word offset)\r\n"
+                                "ORDER: 0 (Big Endian) or 1 (Little Endian)\r\n"
 				"-----------\r\n"
-				"R ADDR LEN - Read 32-bit word\r\n"
-				"W ADDR VAL - Write 32-bit word\r\n"
-				"D          - Dump all flash memory\r\n"
-				"S          - Reboot\r\n"
-				"E          - Exit\r\n"
-				"H          - Show help \r\n"
+				"R ADDR LEN		- Read 32-bit word\r\n"
+				"W ADDR VAL		- Write 32-bit word\r\n"
+				"F SHOW_OFFSET ORDER    - Dump flash memory (BE or LE order) \r\n"
+				"S SHOW_OFFSET ORDER    - Dump system memory (BE or LE order) \r\n"
+				"O SHOW_OFFSET ORDER    - Dump option bytes (BE or LE order) \r\n"
+				"X          		- Reboot\r\n"
+				"E          		- Exit\r\n"
+				"H          		- Show help \r\n"
 				"---------------\r\n";
 
 int main(void)
@@ -142,6 +146,34 @@ void readChar( uint8_t const chr )
 	}
 }
 
+void dump (uint32_t start, uint32_t end, char showOffset, char reorder) 
+{
+	writeStr("\r\n\r\n");
+	{
+		uint32_t const * addr = (uint32_t*) start;
+		uint32_t br = 8u;
+		while (((uintptr_t) addr) < (end))
+		{
+			if (br == 8u)
+			{
+				writeStr("\r\n");
+				if (showOffset) {
+					writeWordBe((uint32_t) addr);
+					writeStr(": ");
+				}
+				br = 0u;
+			}
+
+			if (reorder) writeWordLe(*addr);
+			else writeWordBe(*addr);
+			writeChar(' ');
+			++addr;
+			++br;
+		}
+	}
+	writeStr("\r\n\r\n");
+}
+
 void readCmd( uint8_t const * const cmd )
 {
 	switch (cmd[0])
@@ -164,30 +196,22 @@ void readCmd( uint8_t const * const cmd )
 			writeMem(hexToInt(&cmd[2]), hexToInt(&cmd[11]));
 			break;
 
-		/* Dump all flash */
-		case 'd':
-		case 'D':
-			writeStr("\r\n\r\n");
-			{
-				uint32_t const * addr = (uint32_t*) 0x08000000;
-				uint32_t br = 8u;
-				while (((uintptr_t) addr) < (0x08000000 + 64u * 1024u))
-				{
-					if (br == 8u)
-					{
-						writeStr("\r\n[");
-						writeWordBe((uint32_t) addr);
-						writeStr("]: ");
-						br = 0u;
-					}
+		/* Dump flash memory */
+		case 'f':
+		case 'F':
+			dump(0x08000000, 0x801FFFE, cmd[2] == '1', cmd[3] == '1');
+			break;
 
-					writeWordBe(*addr);
-					writeChar(' ');
-					++addr;
-					++br;
-				}
-			}
-			writeStr("\r\n\r\n");
+		/* Dump system memory */
+		case 's':
+		case 'S':
+			dump(0x1FFFF000, 0x1FFFF7FF, cmd[2] == '1', cmd[3] == '1');
+			break;
+
+		/* Dump option bytes */
+		case 'o':
+		case 'O':
+			dump(0x1FFFF800, 0x1FFFF80E, cmd[2] == '1', cmd[3] == '1');
 			break;
 
 		/* Help command */
@@ -197,8 +221,8 @@ void readCmd( uint8_t const * const cmd )
 			break;
 
 		/* Reboot */
-		case 's':
-		case 'S':
+		case 'x':
+		case 'X':
 			writeStr("Rebooting...\r\n\r\n");
 			*((uint32_t *) 0xE000ED0C) = 0x05FA0004u;
 			break;
@@ -294,9 +318,9 @@ void readMem(uint32_t const addr, uint32_t const len)
 	{
 		addrx = addr + it*4u;
 		writeStr("Read [");
-		writeWordBe(addrx);
+		writeWordLe(addrx);
 		writeStr("]: ");
-		writeWordBe(*((uint32_t*)addrx));
+		writeWordLe(*((uint32_t*)addrx));
 		writeStr("\r\n");
 	}
 }
