@@ -146,7 +146,7 @@ void readChar( uint8_t const chr )
 	}
 }
 
-void dump (uint32_t start, uint32_t end, char showOffset, char reorder) 
+void dump (uint32_t start, uint32_t end, uint8_t showOffset, uint8_t reorder) 
 {
 	writeStr("\r\n\r\n");
 	{
@@ -199,19 +199,19 @@ void readCmd( uint8_t const * const cmd )
 		/* Dump flash memory */
 		case 'f':
 		case 'F':
-			dump(0x08000000, 0x801FFFE, cmd[2] == '1', cmd[3] == '1');
+			dump(0x08000000, 0x801FFFE, cmd[1] == '1', cmd[2] == '1');
 			break;
 
 		/* Dump system memory */
 		case 's':
 		case 'S':
-			dump(0x1FFFF000, 0x1FFFF7FF, cmd[2] == '1', cmd[3] == '1');
+			dump(0x1FFFF000, 0x1FFFF7FF, cmd[1] == '1', cmd[2] == '1');
 			break;
 
 		/* Dump option bytes */
 		case 'o':
 		case 'O':
-			dump(0x1FFFF800, 0x1FFFF80E, cmd[2] == '1', cmd[3] == '1');
+			dump(0x1FFFF800, 0x1FFFF80E, cmd[1] == '1', cmd[2] == '1');
 			break;
 
 		/* Help command */
